@@ -12,6 +12,7 @@ import {
 import FileUploader from './FileUploader';
 import FileList from './FileList';
 import StorageUsage from './StorageUsage';
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { 
   getCurrentUser, 
   getUserStorage, 
@@ -65,14 +66,17 @@ const FileDrive = () => {
     <div className="container py-6 max-w-6xl">
       <header className="mb-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-drive-dark">KeyDrive Vault</h1>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+          <h1 className="text-3xl font-bold">KeyDrive Vault</h1>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4">

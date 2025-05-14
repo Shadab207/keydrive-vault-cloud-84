@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { loginUser, registerUser } from '@/utils/storageUtils';
 
 interface AuthFormProps {
@@ -87,11 +88,14 @@ const AuthForm = ({ onSuccess }: AuthFormProps) => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-drive-light to-white p-4">
+    <div className="flex justify-center items-center min-h-screen p-4">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-3xl font-bold text-drive-dark">KeyDrive Vault</CardTitle>
-          <CardDescription className="text-drive-secondary">
+          <CardTitle className="text-3xl font-bold">KeyDrive Vault</CardTitle>
+          <CardDescription>
             Secure cloud storage for your files
           </CardDescription>
         </CardHeader>
@@ -123,7 +127,7 @@ const AuthForm = ({ onSuccess }: AuthFormProps) => {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
-                <Button type="submit" className="w-full bg-drive-primary hover:bg-drive-primary/90">
+                <Button type="submit" className="w-full">
                   Sign In
                 </Button>
               </form>
@@ -160,7 +164,7 @@ const AuthForm = ({ onSuccess }: AuthFormProps) => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                   />
                 </div>
-                <Button type="submit" className="w-full bg-drive-primary hover:bg-drive-primary/90">
+                <Button type="submit" className="w-full">
                   Create Account
                 </Button>
               </form>
