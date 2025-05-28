@@ -30,6 +30,7 @@ interface FileUploadSession {
   completed: boolean;
   progress: number;
   currentSpeed: number;
+  actuallyUploaded: boolean;
 }
 
 const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
@@ -70,7 +71,8 @@ const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
       metrics: [],
       completed: false,
       progress: 0,
-      currentSpeed: 0
+      currentSpeed: 0,
+      actuallyUploaded: false
     };
 
     setUploadSessions(prev => [...prev, newSession]);
@@ -79,15 +81,22 @@ const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
       let bytesTransferred = 0;
       const metricsHistory: NetworkMetrics[] = [];
 
-      const uploadChunk = () => {
+      const uploadChunk = async () => {
         if (bytesTransferred >= totalBytes) {
+          // Actually upload the file to storage when simulation completes
           const user = getCurrentUser();
-          const success = user ? uploadFile(user, file) : false;
+          const success = user ? await uploadFile(user, file) : false;
           
           setUploadSessions(prev => 
             prev.map(session => 
               session.id === sessionId 
-                ? { ...session, metrics: metricsHistory, completed: true, progress: 100 }
+                ? { 
+                    ...session, 
+                    metrics: metricsHistory, 
+                    completed: true, 
+                    progress: 100,
+                    actuallyUploaded: success
+                  }
                 : session
             )
           );
@@ -156,6 +165,7 @@ const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
           description: `Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}${failCount > 0 ? `, ${failCount} failed` : ''}`,
         });
         
+        // Refresh the storage display
         onUploadComplete();
       } else if (failCount > 0) {
         toast({
@@ -263,8 +273,11 @@ const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
                       <span className="text-sm text-muted-foreground">
                         ({formatFileSize(session.fileSize)})
                       </span>
-                      {session.completed && (
-                        <span className="text-green-600 text-sm">✓ Completed</span>
+                      {session.completed && session.actuallyUploaded && (
+                        <span className="text-green-600 text-sm">✓ Uploaded to Storage</span>
+                      )}
+                      {session.completed && !session.actuallyUploaded && (
+                        <span className="text-red-600 text-sm">✗ Upload Failed</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
