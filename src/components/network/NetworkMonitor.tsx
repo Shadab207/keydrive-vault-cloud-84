@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Download, Activity, Wifi } from 'lucide-react';
+import { Upload, Download, Activity, Wifi, File, Trash2 } from 'lucide-react';
 import { uploadFile, getCurrentUser } from '@/utils/storageUtils';
 import NetworkGraph from './NetworkGraph';
 
@@ -17,12 +17,23 @@ interface NetworkMetrics {
   progress: number;
 }
 
+interface FileUploadSession {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  uploadTime: string;
+  metrics: NetworkMetrics[];
+  completed: boolean;
+}
+
 const NetworkMonitor = () => {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
-  const [metrics, setMetrics] = useState<NetworkMetrics[]>([]);
   const [currentMetrics, setCurrentMetrics] = useState<NetworkMetrics | null>(null);
+  const [currentFileName, setCurrentFileName] = useState<string>('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSessions, setUploadSessions] = useState<FileUploadSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const startTimeRef = useRef<number>(0);
   const lastBytesRef = useRef<number>(0);
@@ -54,10 +65,24 @@ const NetworkMonitor = () => {
     const user = getCurrentUser();
     if (!user) return false;
 
+    const sessionId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setCurrentFileName(file.name);
     startTimeRef.current = Date.now();
     lastBytesRef.current = 0;
     const totalBytes = file.size;
     const chunkSize = Math.max(1024, Math.floor(totalBytes / 100)); // 1% chunks minimum 1KB
+
+    // Create new upload session
+    const newSession: FileUploadSession = {
+      id: sessionId,
+      fileName: file.name,
+      fileSize: totalBytes,
+      uploadTime: new Date().toLocaleString(),
+      metrics: [],
+      completed: false
+    };
+
+    setUploadSessions(prev => [...prev, newSession]);
 
     return new Promise((resolve) => {
       let bytesTransferred = 0;
@@ -67,9 +92,20 @@ const NetworkMonitor = () => {
         if (bytesTransferred >= totalBytes) {
           // Final upload
           const success = uploadFile(user, file);
-          setMetrics(prev => [...prev, ...metricsHistory]);
+          
+          // Update session as completed
+          setUploadSessions(prev => 
+            prev.map(session => 
+              session.id === sessionId 
+                ? { ...session, metrics: metricsHistory, completed: true }
+                : session
+            )
+          );
+          
           setIsUploading(false);
           setUploadProgress(100);
+          setCurrentMetrics(null);
+          setCurrentFileName('');
           resolve(success);
           return;
         }
@@ -80,6 +116,15 @@ const NetworkMonitor = () => {
         setCurrentMetrics(networkMetrics);
         setUploadProgress(networkMetrics.progress);
         metricsHistory.push(networkMetrics);
+
+        // Update session with current metrics
+        setUploadSessions(prev => 
+          prev.map(session => 
+            session.id === sessionId 
+              ? { ...session, metrics: [...metricsHistory] }
+              : session
+          )
+        );
 
         // Simulate network delay
         setTimeout(uploadChunk, 50 + Math.random() * 100);
@@ -138,19 +183,18 @@ const NetworkMonitor = () => {
     }
   };
 
-  const downloadGraphData = () => {
-    if (metrics.length === 0) {
+  const downloadSessionData = (session: FileUploadSession) => {
+    if (session.metrics.length === 0) {
       toast({
         title: "No Data",
-        description: "No upload metrics available to download",
+        description: "No metrics available for this upload session",
         variant: "destructive",
       });
       return;
     }
 
-    // Format data for Power BI (CSV format)
     const csvHeaders = 'Timestamp,Upload_Speed_KBps,Packets_Estimate,Bytes_Transferred,Total_Bytes,Progress_Percent\n';
-    const csvData = metrics.map(metric => 
+    const csvData = session.metrics.map(metric => 
       `${new Date(metric.timestamp).toISOString()},${metric.uploadSpeed.toFixed(2)},${metric.packetsEstimate},${metric.bytesTransferred},${metric.totalBytes},${metric.progress.toFixed(2)}`
     ).join('\n');
 
@@ -158,7 +202,7 @@ const NetworkMonitor = () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `network_metrics_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `${session.fileName}_metrics_${session.id}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -166,9 +210,22 @@ const NetworkMonitor = () => {
 
     toast({
       title: "Download Complete",
-      description: "Network metrics exported for Power BI",
+      description: `Network metrics for ${session.fileName} exported`,
     });
   };
+
+  const deleteSession = (sessionId: string) => {
+    setUploadSessions(prev => prev.filter(session => session.id !== sessionId));
+    if (selectedSessionId === sessionId) {
+      setSelectedSessionId(null);
+    }
+    toast({
+      title: "Session Deleted",
+      description: "Upload session data has been removed",
+    });
+  };
+
+  const selectedSession = uploadSessions.find(session => session.id === selectedSessionId);
 
   return (
     <div className="space-y-6">
@@ -189,16 +246,6 @@ const NetworkMonitor = () => {
               <Upload className="h-4 w-4" />
               {isUploading ? 'Uploading...' : 'Upload & Monitor'}
             </Button>
-            
-            <Button
-              variant="outline"
-              onClick={downloadGraphData}
-              disabled={metrics.length === 0}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export Data
-            </Button>
           </div>
 
           <input
@@ -212,7 +259,7 @@ const NetworkMonitor = () => {
           {isUploading && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Upload Progress</span>
+                <span>Uploading: {currentFileName}</span>
                 <span>{uploadProgress.toFixed(1)}%</span>
               </div>
               <Progress value={uploadProgress} className="w-full" />
@@ -254,8 +301,69 @@ const NetworkMonitor = () => {
         </CardContent>
       </Card>
 
-      {metrics.length > 0 && (
-        <NetworkGraph metrics={metrics} />
+      {uploadSessions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload Sessions History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {uploadSessions.map((session) => (
+                <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <File className="h-4 w-4" />
+                    <div>
+                      <div className="font-medium">{session.fileName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {(session.fileSize / 1024).toFixed(1)} KB • {session.uploadTime}
+                        {session.completed && <span className="text-green-600 ml-2">✓ Completed</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedSessionId(session.id)}
+                      disabled={!session.completed}
+                    >
+                      View Graph
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadSessionData(session)}
+                      disabled={!session.completed || session.metrics.length === 0}
+                      className="flex items-center gap-1"
+                    >
+                      <Download className="h-3 w-3" />
+                      Export
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteSession(session.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedSession && selectedSession.metrics.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Network Analysis: {selectedSession.fileName}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <NetworkGraph metrics={selectedSession.metrics} />
+          </CardContent>
+        </Card>
       )}
     </div>
   );
