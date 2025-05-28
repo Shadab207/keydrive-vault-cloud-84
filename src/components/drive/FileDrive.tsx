@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -9,9 +8,17 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import FileUploader from './FileUploader';
 import FileList from './FileList';
 import StorageUsage from './StorageUsage';
+import NetworkMonitor from '../network/NetworkMonitor';
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { 
   getCurrentUser, 
@@ -20,7 +27,7 @@ import {
   FileMetadata,
   logoutUser
 } from '@/utils/storageUtils';
-import { GridIcon, List, LogOut, Search } from 'lucide-react';
+import { GridIcon, List, LogOut, Search, Activity } from 'lucide-react';
 
 const FileDrive = () => {
   const { toast } = useToast();
@@ -68,6 +75,20 @@ const FileDrive = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">KeyDrive Vault</h1>
           <div className="flex items-center gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Network Monitor
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Network Performance Monitor</DialogTitle>
+                </DialogHeader>
+                <NetworkMonitor />
+              </DialogContent>
+            </Dialog>
             <ThemeToggle />
             <Button 
               variant="ghost" 
