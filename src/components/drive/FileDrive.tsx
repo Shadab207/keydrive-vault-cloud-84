@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -15,10 +16,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import FileUploader from './FileUploader';
 import FileList from './FileList';
 import StorageUsage from './StorageUsage';
 import NetworkMonitor from '../network/NetworkMonitor';
+import FileAnalytics from '../analytics/FileAnalytics';
+import PacketMonitor from '../monitoring/PacketMonitor';
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { 
   getCurrentUser, 
@@ -27,7 +36,7 @@ import {
   FileMetadata,
   logoutUser
 } from '@/utils/storageUtils';
-import { GridIcon, List, LogOut, Search, Activity } from 'lucide-react';
+import { GridIcon, List, LogOut, Search, Activity, BarChart3, Monitor } from 'lucide-react';
 
 const FileDrive = () => {
   const { toast } = useToast();
@@ -78,15 +87,30 @@ const FileDrive = () => {
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
-                  <Activity className="h-4 w-4" />
-                  Network Monitor
+                  <BarChart3 className="h-4 w-4" />
+                  Analytics & Monitoring
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Network Performance Monitor</DialogTitle>
+                  <DialogTitle>File Analytics & Network Monitoring</DialogTitle>
                 </DialogHeader>
-                <NetworkMonitor />
+                <Tabs defaultValue="analytics" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="analytics">File Analytics</TabsTrigger>
+                    <TabsTrigger value="network">Network Monitor</TabsTrigger>
+                    <TabsTrigger value="packets">Packet Monitor</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="analytics" className="space-y-4">
+                    <FileAnalytics />
+                  </TabsContent>
+                  <TabsContent value="network" className="space-y-4">
+                    <NetworkMonitor />
+                  </TabsContent>
+                  <TabsContent value="packets" className="space-y-4">
+                    <PacketMonitor />
+                  </TabsContent>
+                </Tabs>
               </DialogContent>
             </Dialog>
             <ThemeToggle />
